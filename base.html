@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            border: 2px solid #c8932b;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 420px;
+            background-color: #0d0d0d;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .title {
+            color: #c8932b;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .instructions {
+            color: #c8932b;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .model-section {
+            border: 2px solid #c8932b;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .model-selection {
+            width: 100%;
+            background-color: #1a1a1a;
+            border: 2px solid #c8932b;
+            border-radius: 8px;
+            padding: 10px;
+            color: #c8932b;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .model-selection:focus {
+            outline: none;
+            border-color: #e0a93f;
+        }
+
+        .drawing-section {
+            border: 2px solid #c8932b;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .tool-btn {
+            background-color: transparent;
+            border: 2px solid #c8932b;
+            border-radius: 8px;
+            color: #c8932b;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .tool-btn:hover {
+            background-color: #c8932b;
+            color: #000;
+        }
+
+        .tool-btn.active {
+            background-color: #c8932b;
+            color: #000;
+        }
+
+        .canvas-container {
+            border: 2px solid #c8932b;
+            border-radius: 10px;
+            background-color: #000;
+            margin-bottom: 15px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        .predictions {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            color: #c8932b;
+            font-size: 12px;
+        }
+
+        .prediction {
+            text-align: center;
+            flex: 1;
+        }
+
+        .prediction-label {
+            font-size: 11px;
+            margin-bottom: 3px;
+            min-height: 16px;
+        }
+
+        .bar-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 50px;
+            margin: 5px 0;
+        }
+
+        .bar {
+            width: 100%;
+            max-width: 18px;
+            background-color: #c8932b;
+            border-radius: 2px;
+            transition: height 0.3s ease;
+        }
+
+        .prediction-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .status-section {
+            border: 2px solid #c8932b;
+            border-radius: 10px;
+            padding: 15px;
+            color: #c8932b;
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #c8932b;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .timer-text {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Digit Classifier</div>
+            <div class="instructions">
+                Select a model, then draw a digit (0-9). Classification updates in <strong>real-time</strong> as you draw.
+            </div>
+        </div>
+
+        <div class="model-section">
+            <select id="model" class="model-selection">
+                <option value="mnist_mlp">mnist_mlp</option>
+                <option value="mnist_convnet">mnist_convnet</option>
+            </select>
+        </div>
+
+        <div class="drawing-section">
+            <div class="toolbar">
+                <button class="tool-btn active" id="penBtn">Pen</button>
+                <button class="tool-btn" id="eraserBtn">Eraser</button>
+                <button class="tool-btn" id="clearBtn">Clear</button>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="drawingCanvas" width="280" height="280"></canvas>
+            </div>
+
+            <div class="predictions" id="predictions">
+                <div class="prediction" data-digit="0">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">0</div>
+                </div>
+                <div class="prediction" data-digit="1">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">1</div>
+                </div>
+                <div class="prediction" data-digit="2">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">2</div>
+                </div>
+                <div class="prediction" data-digit="3">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">3</div>
+                </div>
+                <div class="prediction" data-digit="4">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">4</div>
+                </div>
+                <div class="prediction" data-digit="5">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">5</div>
+                </div>
+                <div class="prediction" data-digit="6">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">6</div>
+                </div>
+                <div class="prediction" data-digit="7">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">7</div>
+                </div>
+                <div class="prediction" data-digit="8">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">8</div>
+                </div>
+                <div class="prediction" data-digit="9">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">9</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-section">
+            <div class="status-row">
+                <span class="status-indicator"></span>
+                <p id="status" class="status-text">Initializing...</p>
+            </div>
+            <p id="timer" class="timer-text"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const penBtn = document.getElementById('penBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        let isDrawing = false;
+        let currentTool = 'pen';
+        let lastX = 0;
+        let lastY = 0;
+        let inferenceTimer = null;
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 22;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            lastX = (e.clientX - rect.left) * scaleX;
+            lastY = (e.clientY - rect.top) * scaleY;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            
+            if (currentTool === 'pen') {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+            } else {
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 35;
+            }
+            
+            ctx.stroke();
+            
+            lastX = x;
+            lastY = y;
+
+            scheduleInference();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopDrawing();
+        });
+
+        penBtn.addEventListener('click', () => {
+            currentTool = 'pen';
+            penBtn.classList.add('active');
+            eraserBtn.classList.remove('active');
+            canvas.style.cursor = 'crosshair';
+        });
+
+        eraserBtn.addEventListener('click', () => {
+            currentTool = 'eraser';
+            eraserBtn.classList.add('active');
+            penBtn.classList.remove('active');
+            canvas.style.cursor = 'pointer';
+        });
+
+        clearBtn.addEventListener('click', () => {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            updatePredictions([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            statusText.innerHTML = "Canvas cleared";
+        });
+
+        let net;
+        const modelSelect = document.getElementById('model');
+        const statusText = document.getElementById('status');
+        const timerText = document.getElementById('timer');
+
+        const error = (err) => {
+            statusText.innerHTML = `Error: ${err}`;
+            console.error(err);
+        };
+
+        const timer = async (func, label = "") => {
+            const start = performance.now();
+            const out = await func();
+            const delta = (performance.now() - start).toFixed(1);
+            timerText.innerHTML = `${delta} ms ${label}`;
+            return out;
+        };
+
+        const getDevice = async () => {
+            if (!navigator.gpu) error("WebGPU not supported.");
+            const adapter = await navigator.gpu.requestAdapter();
+            return await adapter.requestDevice({
+                requiredFeatures: ["shader-f16"],
+                powerPreference: "high-performance",
+            });
+        };
+
+        const loadNet = async (modelName) => {
+            const jsPath = `./${modelName}/${modelName}.js`;
+            const netPath = `./${modelName}/${modelName}.webgpu.safetensors`;
+            try {
+                statusText.innerHTML = "Loading model...";
+                const device = await getDevice();
+                const tinygrad = (await import(jsPath)).default;
+                net = await timer(
+                    () => tinygrad.load(device, netPath),
+                    "(compilation)",
+                );
+                statusText.innerHTML = "Ready - start drawing!";
+            } catch (e) {
+                error(e);
+            }
+        };
+
+        const preprocessCanvas = () => {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 28;
+            tempCanvas.height = 28;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Antialiasing pour un meilleur redimensionnement
+            tempCtx.imageSmoothingEnabled = true;
+            tempCtx.imageSmoothingQuality = 'high';
+            
+            // Dessiner sur fond noir
+            tempCtx.fillStyle = '#000';
+            tempCtx.fillRect(0, 0, 28, 28);
+            tempCtx.drawImage(canvas, 0, 0, 28, 28);
+            
+            const imageData = tempCtx.getImageData(0, 0, 28, 28);
+            
+            // DEBUG: Visualiser ce que le modèle voit
+            if (window.debugVisualization) {
+                const debugCanvas = document.getElementById('debugCanvas');
+                if (debugCanvas) {
+                    const debugCtx = debugCanvas.getContext('2d');
+                    debugCtx.putImageData(imageData, 0, 0);
+                }
+            }
+            
+            const input = new Float32Array(784);
+            for (let i = 0; i < 784; i++) {
+                const pixel = imageData.data[i * 4];
+                // Normalisation identique à l'entraînement: X * 2 / 255 - 1
+                input[i] = (pixel * 2 / 255.0) - 1.0;
+            }
+            
+            return input;
+        };
+
+        const softmax = (logits) => {
+            const maxLogit = Math.max(...logits);
+            const expScores = logits.map(x => Math.exp(x - maxLogit));
+            const sumExpScores = expScores.reduce((a, b) => a + b, 0);
+            return expScores.map(x => x / sumExpScores);
+        };
+
+        const updatePredictions = (probabilities) => {
+            const predictions = document.querySelectorAll('.prediction');
+            predictions.forEach((pred, i) => {
+                const percentage = (probabilities[i] * 100).toFixed(0);
+                const label = pred.querySelector('.prediction-label');
+                const bar = pred.querySelector('.bar');
+                
+                label.textContent = `${percentage}%`;
+                bar.style.height = `${Math.max(5, probabilities[i] * 50)}px`;
+            });
+        };
+
+        const runInference = async () => {
+            if (!net) return;
+            
+            try {
+                const input = preprocessCanvas();
+                
+                // DEBUG: Vérifier les statistiques de l'entrée
+                const min = Math.min(...input);
+                const max = Math.max(...input);
+                const mean = input.reduce((a, b) => a + b) / input.length;
+                console.log(`Input stats - min: ${min.toFixed(2)}, max: ${max.toFixed(2)}, mean: ${mean.toFixed(2)}`);
+                
+                const res = await net(input);
+                const logits = Array.from(new Float32Array(res[0]));
+                
+                console.log("Raw logits:", logits.map(x => x.toFixed(2)));
+                
+                const probabilities = softmax(logits);
+                const prediction = probabilities.indexOf(Math.max(...probabilities));
+                
+                updatePredictions(probabilities);
+                statusText.innerHTML = `Prediction: ${prediction} (${(probabilities[prediction] * 100).toFixed(1)}%)`;
+            } catch (e) {
+                console.error("Inference error:", e);
+            }
+        };
+
+        const scheduleInference = () => {
+            if (inferenceTimer) {
+                clearTimeout(inferenceTimer);
+            }
+            inferenceTimer = setTimeout(() => {
+                runInference();
+            }, 100);
+        };
+
+        modelSelect.addEventListener('change', (e) => loadNet(e.target.value));
+        
+        loadNet(modelSelect.value);
+    </script>
+</body>
+</html>

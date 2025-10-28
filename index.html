@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application de Dessin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            border: 2px solid #c8932b;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 420px;
+            background-color: #0d0d0d;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .title {
+            color: #c8932b;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .instructions {
+            color: #c8932b;
+            font-size: 14px;
+        }
+
+        .model-selection {
+            border: 2px solid #c8932b;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            color: #c8932b;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .drawing-section {
+            border: 2px solid #c8932b;
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .tool-btn {
+            background-color: transparent;
+            border: 2px solid #c8932b;
+            border-radius: 8px;
+            color: #c8932b;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .tool-btn:hover {
+            background-color: #c8932b;
+            color: #000;
+        }
+
+        .tool-btn.active {
+            background-color: #c8932b;
+            color: #000;
+        }
+
+        .canvas-container {
+            border: 2px solid #c8932b;
+            border-radius: 10px;
+            background-color: #1a1a1a;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        .predictions {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            color: #c8932b;
+            font-size: 14px;
+        }
+
+        .prediction {
+            text-align: center;
+        }
+
+        .prediction-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .prediction-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .bar-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 40px;
+            margin: 5px 0;
+            justify-content: center;
+        }
+
+        .bar {
+            width: 8px;
+            background-color: #c8932b;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Title</div>
+            <div class="instructions">Instructions</div>
+        </div>
+
+        <div class="model-selection">
+            Model Selection
+        </div>
+
+        <div class="drawing-section">
+            <div class="toolbar">
+                <button class="tool-btn active" id="penBtn">Pen</button>
+                <button class="tool-btn" id="eraserBtn">Eraser</button>
+                <button class="tool-btn" id="clearBtn">Clear</button>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="drawingCanvas" width="350" height="250"></canvas>
+            </div>
+
+            <div class="predictions">
+                <div class="prediction">
+                    <div class="prediction-label">90%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 40px;"></div>
+                    </div>
+                    <div class="prediction-value">0</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">85%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 35px;"></div>
+                    </div>
+                    <div class="prediction-value">1</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">2</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">3</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">4</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">5</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">6</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">7</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">0%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 5px;"></div>
+                    </div>
+                    <div class="prediction-value">8</div>
+                </div>
+
+                <div class="prediction">
+                    <div class="prediction-label">7%</div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 20px;"></div>
+                    </div>
+                    <div class="prediction-value">9</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const penBtn = document.getElementById('penBtn');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        let isDrawing = false;
+        let currentTool = 'pen';
+        let lastX = 0;
+        let lastY = 0;
+
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#c8932b';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            
+            if (currentTool === 'pen') {
+                ctx.strokeStyle = '#c8932b';
+                ctx.lineWidth = 8;
+            } else {
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 20;
+            }
+            
+            ctx.stroke();
+            
+            lastX = x;
+            lastY = y;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            canvas.dispatchEvent(mouseEvent);
+        });
+
+        penBtn.addEventListener('click', () => {
+            currentTool = 'pen';
+            penBtn.classList.add('active');
+            eraserBtn.classList.remove('active');
+            canvas.style.cursor = 'crosshair';
+        });
+
+        eraserBtn.addEventListener('click', () => {
+            currentTool = 'eraser';
+            eraserBtn.classList.add('active');
+            penBtn.classList.remove('active');
+            canvas.style.cursor = 'pointer';
+        });
+
+        clearBtn.addEventListener('click', () => {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+    </script>
+</body>
+</html>
