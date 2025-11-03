@@ -1,17 +1,16 @@
 from enum import Enum
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Dict
 from tinygrad import Tensor, TinyJit, nn
 from tinygrad.device import Device
 from tinygrad.helpers import getenv, trange
 from tinygrad.nn.datasets import mnist
 
 from tinygrad.nn.state import get_state_dict, load_state_dict, safe_load
+# On utilise ton patch de sauvegarde
 from safe_save_patch import safe_save_windows as safe_save
 
-from safe_save_patch import safe_save_windows as safe_save
 from export_model import export_model
-
 import math
 
 class SamplingMod(Enum):
@@ -66,8 +65,8 @@ def geometric_transform(X: Tensor, angle_deg: Tensor, scale: Tensor, shift_x: Te
 
 
 def normalize(X: Tensor) -> Tensor:
+  # Normalisation correcte: (0.0 à 1.0) -> (-1.0 à +1.0)
   return X * 2 / 255 - 1
-
 
 class Model:
   def __init__(self):
@@ -83,8 +82,6 @@ class Model:
 if __name__ == "__main__":
   B = int(getenv("BATCH", 512))
   LR = float(getenv("LR", 0.02))
-  LR_DECAY = float(getenv("LR_DECAY", 0.9))
-  PATIENCE = float(getenv("PATIENCE", 30))
 
   ANGLE = float(getenv("ANGLE", 15))
   SCALE = float(getenv("SCALE", 0.1))
@@ -116,29 +113,39 @@ if __name__ == "__main__":
   @TinyJit
   def get_test_acc() -> Tensor: return (model(normalize(X_test)).argmax(axis=1) == Y_test).mean() * 100
 
-  test_acc, best_acc, best_since = float('nan'), 0, 0
+  print(f"Début de l'entraînement simple pour {getenv('STEPS', 150)} étapes...")
+  
+  test_acc = float('nan')
   for i in (t:=trange(getenv("STEPS", 150))):
     loss = train_step()
+    
+    if i % 10 == 9:
+      test_acc = get_test_acc().item() 
+      t.set_description(f"lr: {opt.lr.item():2.2e}  loss: {loss.item():2.2f}  accuracy: {test_acc:2.2f}%")
+    else:
+      t.set_description(f"lr: {opt.lr.item():2.2e}  loss: {loss.item():2.2f}")
+  
+  print("\nEntraînement terminé. Sauvegarde finale du modèle...")
+  
+  final_state_dict = get_state_dict(model) 
+  save_path = dir_name / f"{model_name}.safetensors"
+  safe_save(final_state_dict, save_path)
+  
+  final_acc = get_test_acc().item()
+  print(f"Modèle final sauvegardé dans {save_path} (Précision: {final_acc:2.2f}%)")
 
-    if (i % 10 == 9) and (test_acc := get_test_acc().item()) > best_acc:
-      best_since = 0
-      best_acc = test_acc
-      state_dict = get_state_dict(model)
-      safe_save(state_dict, dir_name / f"{model_name}.safetensors")
-
-    if (best_since := best_since + 1) % PATIENCE == PATIENCE - 1:
-      best_since = 0
-      opt.lr *= LR_DECAY
-      state_dict = safe_load(dir_name / f"{model_name}.safetensors")
-      load_state_dict(model, state_dict)
-
-    t.set_description(f"lr: {opt.lr.item():2.2e}  loss: {loss.item():2.2f}  accuracy: {best_acc:2.2f}%")
-
+  print("\nExportation vers WebGPU...")
   Device.DEFAULT = "WEBGPU"
-  model = Model()
-  state_dict = safe_load(dir_name / f"{model_name}.safetensors")
-  load_state_dict(model, state_dict)
+  
+  model_export = Model() 
+  state_dict = safe_load(save_path) 
+  load_state_dict(model_export, state_dict)
+  
   input = Tensor.randn(1, 1, 28, 28)
-  prg, *_, state = export_model(model, Device.DEFAULT.lower(), input, model_name=model_name)
+  # --- LIGNE CORRIGÉE ---
+  prg, *_, state = export_model(model_export, Device.DEFAULT.lower(), input, model_name=model_name)
+  
   safe_save(state, dir_name / f"{model_name}.webgpu.safetensors")
   with open(dir_name / f"{model_name}.js", "w") as text_file: text_file.write(prg)
+
+  print(f"Exportation terminée. Fichiers sauvegardés dans le dossier '{model_name}/'")
