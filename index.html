@@ -391,22 +391,8 @@
         };
 
         const getDevice = async () => {
-            if (!navigator.gpu) {
-                error("WebGPU n'est pas supporté sur ce navigateur.");
-                return null; // Arrêter ici
-            }
+            if (!navigator.gpu) error("WebGPU not supported.");
             const adapter = await navigator.gpu.requestAdapter();
-            
-            // --- C'EST LA CORRECTION ---
-            // On vérifie si l'adaptateur a été trouvé
-            if (!adapter) {
-                error("Impossible de trouver un adaptateur GPU compatible.");
-                statusIndicator.classList.remove('loading', 'ready');
-                statusIndicator.style.backgroundColor = '#ff453a'; // Rouge
-                return null; // Arrêter ici
-            }
-            // --- FIN DE LA CORRECTION ---
-
             return await adapter.requestDevice({
                 requiredFeatures: ["shader-f16"],
                 powerPreference: "high-performance",
@@ -414,34 +400,17 @@
         };
 
         const loadNet = async (modelName) => {
-            statusText.innerHTML = "Loading model...";
-            statusIndicator.classList.add('loading');
-            statusIndicator.classList.remove('ready');
-            timerText.innerHTML = "";
-            
             const jsPath = `./${modelName}/${modelName}.js`;
-            const netPath = `./${modelName}/${modelName}.webgpu.safensors`;
-            
+            const netPath = `./${modelName}/${modelName}.webgpu.safetensors`;
             try {
+                statusText.innerHTML = "Loading model...";
                 const device = await getDevice();
-
-                // --- AJOUT DE CETTE VÉRIFICATION ---
-                // Si device est null (parce que getDevice a échoué),
-                // on arrête le chargement. L'erreur est déjà affichée.
-                if (!device) {
-                    return;
-                }
-                // --- FIN DE L'AJOUT ---
-
                 const tinygrad = (await import(jsPath)).default;
                 net = await timer(
                     () => tinygrad.load(device, netPath),
                     "(compilation)",
                 );
                 statusText.innerHTML = "Ready - start drawing!";
-                statusIndicator.classList.remove('loading');
-                statusIndicator.classList.add('ready');
-                timerText.innerHTML = "";
             } catch (e) {
                 error(e);
             }
