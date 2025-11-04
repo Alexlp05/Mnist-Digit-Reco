@@ -391,24 +391,58 @@
         };
 
         const getDevice = async () => {
-            if (!navigator.gpu) error("WebGPU not supported.");
-            const adapter = await navigator.gpu.requestAdapter();
-            return await adapter.requestDevice({
-                requiredFeatures: ["shader-f16"],
-                powerPreference: "high-performance",
+            if (!navigator.gpu) {
+                error("WebGPU not supported on this browser.");
+                return null; // Stopper ici
+            }
+
+            const adapter = await navigator.gpu.requestAdapter({
+                powerPreference: "high-performance"
             });
+
+            if (!adapter) {
+                error("Failed to get GPU adapter. Your device may not support WebGPU.");
+                return null; // Stopper ici
+            }
+
+            // --- Gestion optionnelle de f16 ---
+            const requiredFeatures = [];
+            if (adapter.features.has("shader-f16")) {
+                requiredFeatures.push("shader-f16");
+                console.log("Adapter supports shader-f16.");
+            } else {
+                console.warn("Adapter does NOT support shader-f16. Proceeding without it.");
+            }
+
+            try {
+                const device = await adapter.requestDevice({
+                    requiredFeatures: requiredFeatures // Ne demande f16 que s'il est dispo
+                });
+                return device;
+            } catch (e) {
+                error(`Failed to request device: ${e.message}`);
+                return null;
+            }
         };
 
         const loadNet = async (modelName) => {
             const jsPath = `./${modelName}/${modelName}.js`;
             const netPath = `./${modelName}/${modelName}.webgpu.safetensors`;
             try {
-                statusText.innerHTML = "Loading model...";
+                statusText.innerHTML = "Initializing WebGPU device...";
                 const device = await getDevice();
+
+                // AJOUT : Vérification cruciale
+                if (!device) {
+                    // getDevice() a déjà affiché l'erreur
+                    return;
+                }
+
+                statusText.innerHTML = "Compiling WebGPU kernels... (this may take a moment)";
                 const tinygrad = (await import(jsPath)).default;
                 net = await timer(
                     () => tinygrad.load(device, netPath),
-                    "(compilation)",
+                    "(Model init & compile)",
                 );
                 statusText.innerHTML = "Ready - start drawing!";
             } catch (e) {
