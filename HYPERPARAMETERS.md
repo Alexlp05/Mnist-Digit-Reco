@@ -5,9 +5,9 @@ Ceci documente les tests effectués pour trouver les meilleurs hyperparamètres 
 ## 1. Modèle MLP (`mnist_mlp.py`)
 
 **Objectif de Précision :** $\ge 95\%$
-**Paramètres de base :** `STEPS=150`, `LR=0.02`, `BATCH=512`, `ANGLE=15`, `SCALE=0.1`, `SHIFT=0.1`
+**Paramètres de base :** `STEPS=50`, `LR=0.02`, `BATCH=512`, `ANGLE=15`, `SCALE=0.1`, `SHIFT=0.1`
 
-| Essai | `STEPS` | `LR` | `BATCH` | `ANGLE` | `SCALE` | Loss | Précision Finale | Notes |
+| Essai | `STEPS` | `LR` | `BATCH` | `ANGLE` | `SCALE` | Loss | Précision Finale | Notes | Temps d'entrainement
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
 | **0** | 50  | 0.02 | 512 | 15 | 0.1 | 1.83 | 72.18% | Test de base. | 00:09 min
 | **0** | 70  | 0.02 | 512 | 15 | 0.1 | 0.52 | 90.49% | Test de base. | 00:09 min
@@ -27,27 +27,33 @@ Ceci documente les tests effectués pour trouver les meilleurs hyperparamètres 
 **Modèle Final Choisi (MLP) :**
 * **Commande :** `$env:STEPS = "1000"; $env:LR = "0.035"; $env:BATCH = "1024";$env:ANGLE = "15"; $env:SCALE = "0.1"; python mnist_mlp.py`
 * **Précision :** **98.41%**
+* **RAM Used :** **0.18 GB**
+* **Layers :** **5 bias**
 
 ---
 
 ## 2. Modèle CNN (`mnist_convnet.py`)
 
 **Objectif de Précision :** $\ge 98\%$
-**Paramètres de base :** `STEPS=150`, `LR=0.02`, `BATCH=512`, `ANGLE=15`, `SCALE=0.1`, `SHIFT=0.1`
+**Paramètres de base :** `STEPS=10`, `LR=0.02`, `BATCH=512`, `ANGLE=15`, `SCALE=0.1`, `SHIFT=0.1`
 
-| Essai | `STEPS` | `LR` | `BATCH` | `ANGLE` | `SCALE` | Précision Finale | Notes |
+| Essai | `STEPS` | `LR` | `BATCH` | `ANGLE` | `SCALE` | `SHIFT` | Précision Finale | Notes | Temps d'entrainement
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1** | 150 | 0.02 | 512 | 15 | 0.1 | % | Test de base. |
-| **2** | 400 | 0.02 | 512 | 15 | 0.1 | % | Test 1, plus long. |
-| **3** | 400 | 0.01 | 512 | 15 | 0.1 | % | LR divisé par 2. |
-| **4** | 400 | 0.005| 512 | 15 | 0.1 | % | LR divisé par 4. |
-| **5** | 400 | 0.005| 256 | 15 | 0.1 | % | (En supposant 0.005 meilleur LR) Test BATCH plus petit. |
-| **6** | 400 | 0.005| 128 | 15 | 0.1 | % | Test BATCH très petit. |
-| **7** | 400 | 0.005| 256 | 0  | 0.0 | % | (En supposant 0.005/256 optimal) Test **sans augmentation**. |
-| **8** | 400 | 0.005| 256 | 20 | 0.15| % | Test avec **plus** d'augmentation. |
-| **9** | 800 | 0.005| 256 | 15 | 0.1 | % | Entraînement long (meilleure combinaison). |
-| **10**| 1000| 0.005| 128 | 15 | 0.1 | % | Entraînement long + BATCH plus petit. |
+| **0** | 10  | 0.02 | 512 | 15 | 0.1 | 0.1 | 0.89 | 31.18% | Test de base. | 00:24 min
+| **1** | 10  | 0.01 | 512 | 15 | 0.1 | 0.1 | 0.85 | 15.34% | LR plus faible. | 00:24 min
+| **2** | 10  | 0.04 | 512 | 15 | 0.1 | 0.1 | 0.89 | 23.40% | LR plus élevé. | 00:27 min
+| **3** | 50  | 0.02 | 128 | 15 | 0.1 | 0.1 | 0.17 | 97.71% | Plus de STEPS mais moins de BATCH. | 01:08 min
+| **4** | 50  | 0.02 | 256 | 15 | 0.1 | 0.1 | 0.13 | 97.09% | Moyen Batch Size. | 01:12 min
+| **5** | 50  | 0.04 | 1024| 15 | 0.1 | 0.1 | 0.15 | 95.42% | Grand Batch Size. | 02:37 min
+| **6** | 100 | 0.005| 256 | 15 | 0.1 | 0.1 | 0.09 | 98.17% | PTests à 100 Étapes (Impact de l'Augmentation / Sampling). | 01:07 min
+| **7** | 100 | 0.02 | 256 | 15 | 0.1 | 0.1 | 0.18 | 97.60% | Test 100 étapes (Sans Augmentation). | 01:07 min
+| **8** | 100 | 0.005| 256 | 0  | 0.0 | 0.0 | 0.0  | 89.46% | Test 0 ANGLE, SCALE, SHIFT. | 01:10 min
+| **9** | 100 | 0.005| 256 | 30 | 0.2 | 0.2 | 0.20 | 96.71% | Test ANGLE, SCALE, SHIFT doublé. | 01:08 min
+| **10**| 100 | 0.005| 256 | 15 | 0.1 | 0.1 | 0.0  | 97.67% | Test 100 étapes (Sampling Bilinear). | 01:07 min
+| **11**| 100 | 0.01 | 128 | 15 | 0.1 | 0.1 | 0.26 | 97.19% | Test 100 étapes (Combo agressif : LR plus élevé, petit batch). | 00:45 min
 
 **Modèle Final Choisi (CNN) :**
-* **Commande :** `STEPS=... ;LR=... ;BATCH=... ;ANGLE=...;SCALE=...;python mnist_convnet.py`
-* **Précision :** **XX.XX%**
+* **Commande :** `$env:STEPS="100"; $env:LR="0.005"; $env:BATCH="256"; $env:ANGLE="15"; $env:SCALE="0.1"; $env:SHIFT="0.1"; python mnist_convnet.py`
+* **Précision :** **98.17%**
+* **RAM Used :** **2.21 GB**
+* **Layers :** **13 bias**

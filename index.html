@@ -26,7 +26,6 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            /* Changement de police pour un look plus "pro" */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             padding: 20px;
             color: var(--color-text);
@@ -35,11 +34,12 @@
         .container {
             width: 100%;
             max-width: 400px; 
-            background-color: #222; /* Fond principal */
+            background-color: #222;
             border-radius: 16px;
             padding: 24px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            border: none; /* On enlève la bordure "or" du conteneur */
+            border: none;
+            transition: max-width 0.3s ease;
         }
 
         .header {
@@ -55,12 +55,11 @@
         }
 
         .instructions {
-            color: var(--color-text-muted); /* Couleur adoucie */
+            color: var(--color-text-muted);
             font-size: 15px;
             line-height: 1.5;
         }
 
-        /* Remplacement des "sections" par des "panneaux" */
         .model-section,
         .drawing-section,
         .status-section {
@@ -68,7 +67,7 @@
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
-            border: none; /* On enlève la bordure "or" des sections */
+            border: none;
         }
 
         .model-selection {
@@ -97,10 +96,10 @@
 
         .tool-btn {
             background-color: #3e3e3e;
-            border: none; /* On enlève la bordure "or" */
+            border: none;
             border-radius: 8px;
             color: var(--color-text);
-            padding: 12px; /* Padding ajusté */
+            padding: 12px;
             cursor: pointer;
             font-size: 15px;
             font-weight: 500;
@@ -109,7 +108,7 @@
 
         .tool-btn:hover {
             background-color: #555;
-            color: var(--color-text); /* Couleur de survol changée */
+            color: var(--color-text);
         }
 
         .tool-btn.active {
@@ -119,7 +118,7 @@
         }
 
         .canvas-container {
-            border: 2px solid #444; /* Bordure plus subtile */
+            border: 2px solid #444;
             border-radius: 8px;
             background-color: #000;
             margin-bottom: 20px;
@@ -130,7 +129,7 @@
         canvas {
             display: block;
             cursor: crosshair;
-            width: 100%; /* Responsive */
+            width: 100%;
             height: auto;
         }
 
@@ -157,14 +156,13 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            height: 60px; /* Barres plus hautes */
+            height: 60px;
             margin-bottom: 6px;
         }
 
         .bar {
             width: 90%;
             max-width: 20px;
-            /* La couleur de base est gérée par le JS, on garde celle d'origine */
             background-color: #c8932b;
             border-radius: 4px;
             transition: height 0.3s ease, background-color 0.3s ease;
@@ -186,7 +184,7 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background-color: var(--color-primary); /* Garde le pulse "or" */
+            background-color: var(--color-primary);
             animation: pulse 1.5s infinite;
         }
 
@@ -198,7 +196,7 @@
         .status-text {
             font-size: 15px;
             font-weight: 500;
-            color: var(--color-text); /* Couleur de base */
+            color: var(--color-text);
         }
 
         .timer-text {
@@ -206,6 +204,34 @@
             color: var(--color-text-muted);
             margin-top: 8px;
             text-align: right;
+        }
+        
+        @media (min-width: 768px) {
+            .container {
+                max-width: 720px; 
+            }
+            .drawing-section {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            .toolbar {
+                width: 100%;
+                margin-bottom: 0;
+            }
+            .canvas-container {
+                flex: 1;
+                min-width: 284px; 
+                margin-bottom: 0;
+            }
+            .predictions {
+                flex: 1.2;
+                min-width: 300px;
+            }
+            .bar-container {
+                height: 80px;
+            }
         }
     </style>
 </head>
@@ -260,291 +286,389 @@
     </div>
 
     <script type="module">
-        const canvas = document.getElementById('drawingCanvas');
-        const ctx = canvas.getContext('2d');
-        const penBtn = document.getElementById('penBtn');
-        const eraserBtn = document.getElementById('eraserBtn');
-        const clearBtn = document.getElementById('clearBtn');
+        // =================================================================
+        // MODULE 1: UI MANAGER
+        // Gère les éléments du DOM et les mises à jour de l'interface
+        // =================================================================
+        const UIManager = {
+            elements: {
+                // Éléments de l'interface
+                statusText: document.getElementById('status'),
+                timerText: document.getElementById('timer'),
+                predictions: document.querySelectorAll('.prediction'),
+                // Boutons d'outils
+                penBtn: document.getElementById('penBtn'),
+                eraserBtn: document.getElementById('eraserBtn'),
+                clearBtn: document.getElementById('clearBtn'),
+                // Contrôles
+                modelSelect: document.getElementById('model'),
+                canvas: document.getElementById('drawingCanvas'),
+            },
 
-        let isDrawing = false;
-        let currentTool = 'pen';
-        let lastX = 0;
-        let lastY = 0;
-        let inferenceTimer = null;
+            init(onToolChange, onClear, onModelChange) {
+                this.elements.penBtn.addEventListener('click', () => onToolChange('pen'));
+                this.elements.eraserBtn.addEventListener('click', () => onToolChange('eraser'));
+                this.elements.clearBtn.addEventListener('click', () => onClear());
+                this.elements.modelSelect.addEventListener('change', (e) => onModelChange(e.target.value));
+            },
 
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1; // BUG : Le trait est trop fin
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+            setStatus(text) {
+                this.elements.statusText.innerHTML = text;
+            },
 
-        function startDrawing(e) {
-            isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            lastX = (e.clientX - rect.left) * scaleX;
-            lastY = (e.clientY - rect.top) * scaleY;
-        }
+            setTimer(text) {
+                this.elements.timerText.innerHTML = text;
+            },
 
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            setTool(tool) {
+                this.elements.penBtn.classList.toggle('active', tool === 'pen');
+                this.elements.eraserBtn.classList.toggle('active', tool === 'eraser');
+                this.elements.canvas.style.cursor = (tool === 'pen') ? 'crosshair' : 'pointer';
+            },
 
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(x, y);
-            
-            if (currentTool === 'pen') {
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 22; // BUG : Corrigé dans la fonction draw, mais pas à l'initialisation
-            } else {
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 35;
-            }
-            
-            ctx.stroke();
-            
-            lastX = x;
-            lastY = y;
+            updatePredictions(probabilities) {
+                let maxProb = 0;
+                let maxIndex = 0;
 
-            scheduleInference();
-        }
-
-        function stopDrawing() {
-            isDrawing = false;
-        }
-
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent('mousedown', {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent('mousemove', {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
-        });
-
-        canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            stopDrawing();
-        });
-
-        penBtn.addEventListener('click', () => {
-            currentTool = 'pen';
-            penBtn.classList.add('active');
-            eraserBtn.classList.remove('active');
-            canvas.style.cursor = 'crosshair';
-        });
-
-        eraserBtn.addEventListener('click', () => {
-            currentTool = 'eraser';
-            eraserBtn.classList.add('active');
-            penBtn.classList.remove('active');
-            canvas.style.cursor = 'pointer';
-        });
-
-        clearBtn.addEventListener('click', () => {
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            updatePredictions([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-            statusText.innerHTML = "Canvas cleared";
-        });
-
-        let net;
-        const modelSelect = document.getElementById('model');
-        const statusText = document.getElementById('status');
-        const timerText = document.getElementById('timer');
-
-        const error = (err) => {
-            statusText.innerHTML = `Error: ${err}`;
-            console.error(err);
-        };
-
-        const timer = async (func, label = "") => {
-            const start = performance.now();
-            const out = await func();
-            const delta = (performance.now() - start).toFixed(1);
-            timerText.innerHTML = `${delta} ms ${label}`;
-            return out;
-        };
-
-        const getDevice = async () => {
-            if (!navigator.gpu) {
-                error("WebGPU not supported on this browser.");
-                return null; // Stopper ici
-            }
-
-            const adapter = await navigator.gpu.requestAdapter({
-                powerPreference: "high-performance"
-            });
-
-            if (!adapter) {
-                error("Failed to get GPU adapter. Your device may not support WebGPU.");
-                return null; // Stopper ici
-            }
-
-            // --- Gestion optionnelle de f16 ---
-            const requiredFeatures = [];
-            if (adapter.features.has("shader-f16")) {
-                requiredFeatures.push("shader-f16");
-                console.log("Adapter supports shader-f16.");
-            } else {
-                console.warn("Adapter does NOT support shader-f16. Proceeding without it.");
-            }
-
-            try {
-                const device = await adapter.requestDevice({
-                    requiredFeatures: requiredFeatures // Ne demande f16 que s'il est dispo
+                probabilities.forEach((prob, i) => {
+                    if (prob > maxProb) {
+                        maxProb = prob;
+                        maxIndex = i;
+                    }
                 });
-                return device;
-            } catch (e) {
-                error(`Failed to request device: ${e.message}`);
-                return null;
+
+                this.elements.predictions.forEach((pred, i) => {
+                    const percentage = (probabilities[i] * 100).toFixed(0);
+                    const label = pred.querySelector('.prediction-label');
+                    const bar = pred.querySelector('.bar');
+                    
+                    label.textContent = `${percentage}%`;
+                    const maxBarHeight = window.innerWidth >= 768 ? 80 : 60;
+                    bar.style.height = `${Math.max(5, probabilities[i] * maxBarHeight)}px`;
+
+                    if (i === maxIndex) {
+                        bar.style.backgroundColor = 'var(--color-primary)';
+                        label.style.color = 'var(--color-text)';
+                    } else {
+                        bar.style.backgroundColor = '#444';
+                        label.style.color = 'var(--color-text-muted)';
+                    }
+                });
+                
+                return { prediction: maxIndex, confidence: maxProb };
+            },
+            
+            clearPredictions() {
+                this.updatePredictions(new Array(10).fill(0));
             }
         };
 
-        const loadNet = async (modelName) => {
-            const jsPath = `./${modelName}/${modelName}.js`;
-            const netPath = `./${modelName}/${modelName}.webgpu.safetensors`;
-            try {
-                statusText.innerHTML = "Initializing WebGPU device...";
-                const device = await getDevice();
+        // =================================================================
+        // MODULE 2: CANVAS MANAGER
+        // Gère l'état et le dessin du canvas
+        // =================================================================
+        const CanvasManager = {
+            ctx: null,
+            canvas: null,
+            isDrawing: false,
+            currentTool: 'pen',
+            lastX: 0,
+            lastY: 0,
+            onDrawCallback: null,
 
-                // AJOUT : Vérification cruciale
-                if (!device) {
-                    // getDevice() a déjà affiché l'erreur
-                    return;
+            init(canvas, onDrawCallback) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.onDrawCallback = onDrawCallback;
+                
+                // Style initial
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 22; 
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                
+                // Listeners
+                canvas.addEventListener('mousedown', this.startDrawing.bind(this));
+                canvas.addEventListener('mousemove', this.draw.bind(this));
+                canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
+                canvas.addEventListener('mouseout', this.stopDrawing.bind(this));
+                
+                canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const mouseEvent = new MouseEvent('mousedown', { clientX: touch.clientX, clientY: touch.clientY });
+                    canvas.dispatchEvent(mouseEvent);
+                });
+                canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const mouseEvent = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
+                    canvas.dispatchEvent(mouseEvent);
+                });
+                canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.stopDrawing();
+                });
+            },
+
+            getScaledCoords(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                return {
+                    x: (e.clientX - rect.left) * scaleX,
+                    y: (e.clientY - rect.top) * scaleY
+                };
+            },
+
+            startDrawing(e) {
+                this.isDrawing = true;
+                const { x, y } = this.getScaledCoords(e);
+                [this.lastX, this.lastY] = [x, y];
+            },
+
+            draw(e) {
+                if (!this.isDrawing) return;
+                
+                const { x, y } = this.getScaledCoords(e);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.lastX, this.lastY);
+                this.ctx.lineTo(x, y);
+                
+                if (this.currentTool === 'pen') {
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 22;
+                } else {
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 35;
+                }
+                
+                this.ctx.stroke();
+                [this.lastX, this.lastY] = [x, y];
+                
+                this.onDrawCallback();
+            },
+
+            stopDrawing() {
+                this.isDrawing = false;
+            },
+            
+            setTool(tool) {
+                this.currentTool = tool;
+            },
+
+            clear() {
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            },
+            
+            getCanvasElement() {
+                return this.canvas;
+            }
+        };
+
+        // =================================================================
+        // MODULE 3: MODEL MANAGER
+        // Gère WebGPU, le chargement du modèle et l'inférence
+        // =================================================================
+        const ModelManager = {
+            net: null,
+            ui: null, // Référence au UIManager pour les statuts
+
+            init(uiManager) {
+                this.ui = uiManager;
+            },
+
+            async timer(func, label = "") {
+                const start = performance.now();
+                const out = await func();
+                const delta = (performance.now() - start).toFixed(1);
+                this.ui.setTimer(`${delta} ms ${label}`);
+                return out;
+            },
+
+            async getDevice() {
+                if (!navigator.gpu) {
+                    this.ui.setStatus("Error: WebGPU not supported.");
+                    return null;
+                }
+                const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+                if (!adapter) {
+                    this.ui.setStatus("Error: Failed to get GPU adapter.");
+                    return null;
+                }
+                const requiredFeatures = adapter.features.has("shader-f16") ? ["shader-f16"] : [];
+                try {
+                    return await adapter.requestDevice({ requiredFeatures });
+                } catch (e) {
+                    this.ui.setStatus(`Error: Failed to request device: ${e.message}`);
+                    return null;
+                }
+            },
+
+            async loadNet(modelName) {
+                this.net = null; // Vider l'ancien réseau
+                const jsPath = `./${modelName}/${modelName}.js`;
+                const netPath = `./${modelName}/${modelName}.webgpu.safetensors`;
+                try {
+                    this.ui.setStatus("Initializing WebGPU device...");
+                    const device = await this.getDevice();
+                    if (!device) return;
+
+                    this.ui.setStatus("Compiling WebGPU kernels...");
+                    const tinygrad = (await import(jsPath)).default;
+                    this.net = await this.timer(
+                        () => tinygrad.load(device, netPath),
+                        "(Model init & compile)",
+                    );
+                    this.ui.setStatus("Ready - start drawing!");
+                } catch (e) {
+                    this.ui.setStatus(`Error: ${e}`);
+                    console.error(e);
+                }
+            },
+
+            preprocessCanvas(canvas) {
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                let minX = canvas.width, minY = canvas.height, maxX = -1, maxY = -1;
+
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const r = data[(y * canvas.width + x) * 4];
+                        if (r > 0) {
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                        }
+                    }
                 }
 
-                statusText.innerHTML = "Compiling WebGPU kernels... (this may take a moment)";
-                const tinygrad = (await import(jsPath)).default;
-                net = await timer(
-                    () => tinygrad.load(device, netPath),
-                    "(Model init & compile)",
+                if (maxX === -1) return new Float32Array(784).fill(-1.0);
+
+                const digitWidth = maxX - minX;
+                const digitHeight = maxY - minY;
+                const largestDim = Math.max(digitWidth, digitHeight);
+                const padding = 40;
+                const paddedSize = largestDim + padding * 2;
+                
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 28;
+                tempCanvas.height = 28;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                tempCtx.fillStyle = '#000';
+                tempCtx.fillRect(0, 0, 28, 28);
+                tempCtx.imageSmoothingEnabled = true;
+                tempCtx.imageSmoothingQuality = 'high';
+                
+                const dX = minX - padding;
+                const dY = minY - padding;
+                const finalScale = 28 / paddedSize;
+
+                tempCtx.drawImage(
+                    canvas,
+                    dX, dY, paddedSize, paddedSize,
+                    0, 0, 28, 28
                 );
-                statusText.innerHTML = "Ready - start drawing!";
-            } catch (e) {
-                error(e);
-            }
-        };
 
-        // BUG : Cette fonction "écrase" l'image au lieu de la centrer
-        const preprocessCanvas = () => {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = 28;
-            tempCanvas.height = 28;
-            const tempCtx = tempCanvas.getContext('2d');
+                const finalImageData = tempCtx.getImageData(0, 0, 28, 28);
+                const input = new Float32Array(784);
+                for (let i = 0; i < 784; i++) {
+                    const pixel = finalImageData.data[i * 4];
+                    input[i] = (pixel * 2 / 255.0) - 1.0;
+                }
+                return input;
+            },
             
-            // Antialiasing pour un meilleur redimensionnement
-            tempCtx.imageSmoothingEnabled = true;
-            tempCtx.imageSmoothingQuality = 'high';
-            
-            // Dessiner sur fond noir
-            tempCtx.fillStyle = '#000';
-            tempCtx.fillRect(0, 0, 28, 28);
-            tempCtx.drawImage(canvas, 0, 0, 28, 28);
-            
-            const imageData = tempCtx.getImageData(0, 0, 28, 28);
-            
-            // DEBUG: Visualiser ce que le modèle voit
-            if (window.debugVisualization) {
-                const debugCanvas = document.getElementById('debugCanvas');
-                if (debugCanvas) {
-                    const debugCtx = debugCanvas.getContext('2d');
-                    debugCtx.putImageData(imageData, 0, 0);
+            softmax(logits) {
+                const maxLogit = Math.max(...logits);
+                const expScores = logits.map(x => Math.exp(x - maxLogit));
+                const sumExpScores = expScores.reduce((a, b) => a + b, 0);
+                return expScores.map(x => x / sumExpScores);
+            },
+
+            async runInference(canvas) {
+                if (!this.net) return null;
+                
+                try {
+                    const input = this.preprocessCanvas(canvas);
+                    const res = await this.net(input);
+                    const logits = Array.from(new Float32Array(res[0]));
+                    return this.softmax(logits);
+                } catch (e) {
+                    console.error("Inference error:", e);
+                    this.ui.setStatus("Inference error.");
+                    return null;
                 }
             }
+        };
+
+        // =================================================================
+        // APPLICATION INITIALIZATION (Le "Chef d'orchestre")
+        // =================================================================
+        const App = {
+            inferenceTimer: null,
+
+            init() {
+                // 1. Initialiser les gestionnaires
+                ModelManager.init(UIManager);
+                CanvasManager.init(
+                    UIManager.elements.canvas, 
+                    this.scheduleInference.bind(this) // Callback pour le dessin
+                );
+                UIManager.init(
+                    this.handleToolChange.bind(this), // Callback pour les outils
+                    this.handleClear.bind(this),     // Callback pour effacer
+                    this.handleModelChange.bind(this) // Callback pour le modèle
+                );
+
+                // 2. Charger le modèle initial
+                this.handleModelChange(UIManager.elements.modelSelect.value);
+            },
+
+            handleToolChange(tool) {
+                CanvasManager.setTool(tool);
+                UIManager.setTool(tool);
+            },
+
+            handleClear() {
+                CanvasManager.clear();
+                UIManager.clearPredictions();
+                UIManager.setStatus("Canvas cleared");
+            },
+
+            handleModelChange(modelName) {
+                UIManager.setStatus(`Loading ${modelName}...`);
+                UIManager.clearPredictions();
+                ModelManager.loadNet(modelName);
+            },
+
+            scheduleInference() {
+                if (this.inferenceTimer) {
+                    clearTimeout(this.inferenceTimer);
+                }
+                this.inferenceTimer = setTimeout(() => {
+                    this.runInferenceAndUpdateUI();
+                }, 100);
+            },
             
-            const input = new Float32Array(784);
-            for (let i = 0; i < 784; i++) {
-                const pixel = imageData.data[i * 4];
-                // Normalisation identique à l'entraînement: X * 2 / 255 - 1
-                input[i] = (pixel * 2 / 255.0) - 1.0;
-            }
-            
-            return input;
-        };
-
-        const softmax = (logits) => {
-            const maxLogit = Math.max(...logits);
-            const expScores = logits.map(x => Math.exp(x - maxLogit));
-            const sumExpScores = expScores.reduce((a, b) => a + b, 0);
-            return expScores.map(x => x / sumExpScores);
-        };
-
-        const updatePredictions = (probabilities) => {
-            const predictions = document.querySelectorAll('.prediction');
-            predictions.forEach((pred, i) => {
-                const percentage = (probabilities[i] * 100).toFixed(0);
-                const label = pred.querySelector('.prediction-label');
-                const bar = pred.querySelector('.bar');
-                
-                label.textContent = `${percentage}%`;
-                bar.style.height = `${Math.max(5, probabilities[i] * 50)}px`;
-            });
-        };
-
-        const runInference = async () => {
-            if (!net) return;
-            
-            try {
-                const input = preprocessCanvas();
-                
-                // DEBUG: Vérifier les statistiques de l'entrée
-                const min = Math.min(...input);
-                const max = Math.max(...input);
-                const mean = input.reduce((a, b) => a + b) / input.length;
-                console.log(`Input stats - min: ${min.toFixed(2)}, max: ${max.toFixed(2)}, mean: ${mean.toFixed(2)}`);
-                
-                const res = await net(input);
-                const logits = Array.from(new Float32Array(res[0]));
-                
-                console.log("Raw logits:", logits.map(x => x.toFixed(2)));
-                
-                const probabilities = softmax(logits);
-                const prediction = probabilities.indexOf(Math.max(...probabilities));
-                
-                updatePredictions(probabilities);
-                statusText.innerHTML = `Prediction: ${prediction} (${(probabilities[prediction] * 100).toFixed(1)}%)`;
-            } catch (e) {
-                console.error("Inference error:", e);
+            async runInferenceAndUpdateUI() {
+                const probabilities = await ModelManager.runInference(CanvasManager.getCanvasElement());
+                if (probabilities) {
+                    const { prediction, confidence } = UIManager.updatePredictions(probabilities);
+                    UIManager.setStatus(`Prediction: ${prediction} (${(confidence * 100).toFixed(1)}%)`);
+                }
             }
         };
 
-        const scheduleInference = () => {
-            if (inferenceTimer) {
-                clearTimeout(inferenceTimer);
-            }
-            inferenceTimer = setTimeout(() => {
-                runInference();
-            }, 100);
-        };
+        // Démarrer l'application
+        App.init();
 
-        modelSelect.addEventListener('change', (e) => loadNet(e.target.value));
-        
-        loadNet(modelSelect.value);
     </script>
 </body>
 </html>
