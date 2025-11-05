@@ -1,4 +1,4 @@
-# 🧪 Journal d'Expérimentation des Hyperparamètres
+# Journal d'Expérimentation des Hyperparamètres
 
 Ceci documente les tests effectués pour trouver les meilleurs hyperparamètres pour les modèles MLP et CNN, comme requis par la section 1.2 du projet.
 
