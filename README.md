@@ -1,6 +1,6 @@
 # 🚀 TinyGrad MNIST Classifier (WebGPU)
 
-![Capture d'écran de l'application](image.png) 
+![Capture d'écran de l'application](image-1.png)
 
 ## 🔗 Liens du Projet
 
