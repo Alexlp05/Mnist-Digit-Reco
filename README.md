@@ -1,8 +1,8 @@
-# 🚀 TinyGrad MNIST Classifier (WebGPU)
+# TinyGrad MNIST Classifier (WebGPU)
 
 ![Capture d'écran de l'application](image-1.png)
 
-## 🔗 Liens du Projet
+## Liens du Projet
 
 * **Démo Live (GitHub Pages) :** **[https://alexlp05.github.io/Mnist-Digit-Reco/](https://alexlp05.github.io/Mnist-Digit-Reco/)**
 * **Dépôt (Code Source) :** **[https://github.com/Alexlp05/Mnist-Digit-Reco](https://github.com/Alexlp05/Mnist-Digit-Reco)**
@@ -15,7 +15,7 @@ Ce projet est une application web complète de reconnaissance de chiffres manusc
 
 L'utilisateur peut dessiner un chiffre sur un canvas, et un modèle de deep learning (MLP ou CNN) prédit le chiffre en temps réel, affichant la confiance pour chaque classe sous forme de graphique à barres.
 
-## ✨ Fonctionnalités
+## Fonctionnalités
 
 * **Double Modèle :** Sélection facile entre un modèle MLP (rapide) et un CNN (plus précis).
 * **Canvas Interactif :** Outils fonctionnels de **Stylo**, **Gomme** et **Effacer**.
@@ -24,7 +24,7 @@ L'utilisateur peut dessiner un chiffre sur un canvas, et un modèle de deep lear
 * **Visualisation des Probabilités :** Un graphique à barres dynamique affiche la confiance (softmax) du modèle pour les 10 chiffres.
 * **Responsive Design :** L'application est entièrement utilisable sur ordinateur et mobile.
 
-## 🤖 Résumé des Modèles
+## Résumé des Modèles
 
 Les deux modèles ont été entraînés avec succès pour atteindre ou dépasser les objectifs de précision fixés, en utilisant un processus documenté d'exploration des hyperparamètres.
 
@@ -33,8 +33,8 @@ Les deux modèles ont été entraînés avec succès pour atteindre ou dépasser
 | **MLP** | `784-512-512-10` | **98.41%** | $\ge 95\%$ |
 | **CNN** | `C(32)-C(32)-P-C(64)-C(64)-P-L(10)` | **98.17%** | $\ge 98\%$ |
 
-## 🧪 Journal d'Expérimentation
+## Journal d'Expérimentation
 
 Pour une analyse détaillée des différents hyperparamètres testés (LR, Batch Size, Augmentation, etc.) pour les deux modèles :
 
-➡️ **[Consulter le fichier HYPERPARAMETERS.md](./HYPERPARAMETERS.md)**
+**[Consulter le fichier HYPERPARAMETERS.md](./HYPERPARAMETERS.md)**
